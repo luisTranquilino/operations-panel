@@ -1,4 +1,5 @@
-import { api } from "@/services/api";
+// import { api } from "@/services/api";
+import { supabase } from "@/lib/supabase";
 
 export interface Project {
   id: string;
@@ -14,6 +15,16 @@ export interface Project {
 }
 
 export async function getProjects() {
-  const response = await api.post("", {});
-  return response.data;
+  // const response = await api.get("/");
+  // return response.data;
+
+   const { data, error } = await supabase
+    .from("operations-data")
+    .select("*");
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
 }

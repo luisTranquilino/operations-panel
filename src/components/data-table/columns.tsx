@@ -32,17 +32,10 @@ export const columns: ColumnDef<Project>[] = [
     accessorKey: "sentToSalesAt",
     header: () => <div className="text-right">Último Status</div>,
     cell: ({ row }) => {
-      function excelDateToJSDate(serial: string) {
-        const excelStartDate = new Date("1899-12-30");
-
-        excelStartDate.setDate(excelStartDate.getDate() + Number(serial));
-
-        return excelStartDate;
-      }
       const sentToSalesAt = row.getValue("sentToSalesAt");
-      const dataProjeto = excelDateToJSDate(String(sentToSalesAt));
+      const projectDate = new Date(String(sentToSalesAt));
       const daysWithoutReturn = Math.ceil(
-        (new Date().getTime() - dataProjeto.getTime()) / (1000 * 60 * 60 * 24),
+        (new Date().getTime() - projectDate.getTime()) / (1000 * 60 * 60 * 24),
       );
 
       function DateFlag() {

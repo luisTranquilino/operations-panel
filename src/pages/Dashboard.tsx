@@ -1,20 +1,12 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Header } from "../components/Header";
-import {
-  Briefcase,
-  ChartColumnIncreasing,
-  CircleAlert,
-  LayoutTemplate,
-} from "lucide-react";
-import { ChartBarDefault } from "@/components/ChartBarDefault";
-import { ChartPieDonut } from "@/components/ChartPieDonut";
-import { ChartBarHorizontal } from "@/components/ChartBarHorizontal";
-import { Card } from "@/components/Card";
 import { DataTable } from "@/components/data-table/data-table";
 import { columns } from "@/components/data-table/columns";
 import { useProjects } from "@/hooks/useProjects";
 import type { Project } from "@/services/projects";
+import { InfoCards } from "@/components/InfoCards";
+import { InfoCharts } from "@/components/InfoCharts";
 
 type ProjectCountBy = {
   age: string;
@@ -39,69 +31,17 @@ export function Dashboard() {
   const { data, isLoading } = useProjects();
   if (isLoading) return <p>Carregando...</p>;
 
-  const serviceProjectsInProgress =
-    data &&
-    data.filter((project: Project) => project.serviceStatus === "EM ANDAMENTO");
-
-  const salesProjectsInProgress =
-    data &&
-    data.filter(
-      (project: Project) =>
-        project.serviceStatus === "CONCLUIDO" && !project.opStatus,
-    );
-
-  const salesProjectsFinished =
-    data &&
-    data.filter(
-      (project: Project) =>
-        project.serviceStatus === "CONCLUIDO" &&
-        project.opStatus === "FATURADA",
-    );
-
-  const salesProjectsCanceled =
-    data &&
-    data.filter(
-      (project: Project) =>
-        project.serviceStatus === "CONCLUIDO" &&
-        project.opStatus === "CANCELADO",
-    );
-
-  const pipelineValue =
-    salesProjectsInProgress &&
-    salesProjectsInProgress.reduce((totalValue: number, project: Project) => {
-      return totalValue + Number(project.estimatedValue);
-    }, 0);
-
-  const formatter = new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  });
-
-  function excelDateToJSDate(serial: string) {
-    const excelStartDate = new Date("1899-12-30");
-
-    excelStartDate.setDate(excelStartDate.getDate() + Number(serial));
-
-    return excelStartDate;
-  }
+  const salesProjectsInProgress = data?.filter((project: Project) => project.serviceStatus === "CONCLUIDO" && !project.opStatus) || [];
 
   const limitDate = new Date();
 
   limitDate.setDate(limitDate.getDate() - 30);
 
-  const oldProjects =
-    salesProjectsInProgress &&
-    salesProjectsInProgress.filter((project: Project) => {
-      const dataProjeto = excelDateToJSDate(project.sentToSalesAt);
-
-      return dataProjeto <= limitDate;
-    });
-
-  const projectsCountByAge = salesProjectsInProgress.reduce(
+  const projectsCountByAge = salesProjectsInProgress?.reduce(
     (projectsAgeList: Array<ProjectCountBy>, project: Project) => {
-      const dataProjeto = excelDateToJSDate(project.sentToSalesAt);
+      const projectDate = new Date(project.sentToSalesAt);
       const daysWithoutReturn = Math.ceil(
-        (new Date().getTime() - dataProjeto.getTime()) / (1000 * 60 * 60 * 24),
+        (new Date().getTime() - projectDate.getTime()) / (1000 * 60 * 60 * 24),
       );
 
       if (daysWithoutReturn <= 7) {
@@ -124,7 +64,7 @@ export function Dashboard() {
     ],
   );
 
-  const projectsBySales = salesProjectsInProgress.reduce(
+  const projectsBySales = salesProjectsInProgress?.reduce(
     (groupedProjects: Array<ProjectBySale>, project: Project) => {
       const salesInfo = groupedProjects.find(
         (item) => item.sales === project.sales,
@@ -154,110 +94,9 @@ export function Dashboard() {
     <>
       <Header userMail={user.email} />
       <main className="bg-gray-100 p-8 flex flex-col gap-12">
-        {/* Cards de infos e gráficos */}
         <section>
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(200px,100%),1fr))] gap-4 mb-8">
-            <Card>
-              <header className="flex justify-between">
-                <p className="font-medium text-slate-500">Projetos em aberto</p>
-                <Briefcase size={20} className="text-blue-600" />
-              </header>
-              <main>
-                <p className="font-semibold text-2xl">
-                  {serviceProjectsInProgress.length}
-                </p>
-                <span className="text-sm text-slate-500 font-medium">
-                  Com time arquitetura
-                </span>
-              </main>
-            </Card>
-            <Card>
-              <header className="flex justify-between">
-                <p className="font-medium text-slate-500">OPs em aberto</p>
-                <LayoutTemplate size={20} className="text-blue-600" />
-              </header>
-              <main>
-                <p className="font-semibold text-2xl">
-                  {salesProjectsInProgress.length}
-                </p>
-                <span className="text-sm text-slate-500 font-medium">
-                  Com comercial
-                </span>
-              </main>
-            </Card>
-            <Card className="border border-red-300 bg-red-100/30">
-              <header className="flex justify-between">
-                <p className="font-medium text-red-400">Projetos criticos</p>
-                <CircleAlert size={20} className="text-red-400" />
-              </header>
-              <main>
-                <p className="font-semibold text-2xl text-red-500">
-                  {oldProjects.length}
-                </p>
-                <span className="text-sm text-red-400">
-                  +30 dias sem retorno do comercial
-                </span>
-              </main>
-            </Card>
-            <Card>
-              <header className="flex justify-between">
-                <p className="font-medium text-slate-500">Valor em pipeline</p>
-                <ChartColumnIncreasing size={20} className="text-blue-600" />
-              </header>
-              <main>
-                <p className="font-semibold text-2xl">
-                  {formatter.format(pipelineValue)}
-                </p>
-                <span className="text-sm text-slate-500 font-medium">
-                  Estimativa total
-                </span>
-              </main>
-            </Card>
-          </div>
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(280px,100%),1fr))] gap-4">
-            <Card className="col-span-2 ">
-              <header>
-                <p className="font-medium">Pipeline por responsável</p>
-              </header>
-              <main>
-                <ChartBarDefault projectsBySales={projectsBySales} />
-              </main>
-            </Card>
-            <Card className="flex flex-col justify-center">
-              <header>
-                <p className="font-medium">Status de Faturamento</p>
-              </header>
-              <main className="my-auto">
-                <ChartPieDonut
-                  salesProjectsStatus={[
-                    {
-                      status: "progress",
-                      count: salesProjectsInProgress.length,
-                      fill: "#2463eb",
-                    },
-                    {
-                      status: "finished",
-                      count: salesProjectsFinished.length,
-                      fill: "#2d9c8e",
-                    },
-                    {
-                      status: "canceled",
-                      count: salesProjectsCanceled.length,
-                      fill: "#ee4059",
-                    },
-                  ]}
-                />
-              </main>
-            </Card>
-            <Card className="flex flex-col justify-center">
-              <header>
-                <p className="font-medium">Aging: Dias sem Retorno</p>
-              </header>
-              <main className="my-auto">
-                <ChartBarHorizontal projectsCountByAge={projectsCountByAge} />
-              </main>
-            </Card>
-          </div>
+          <InfoCards salesProjectsInProgress={salesProjectsInProgress} oldProjects={projectsCountByAge[3].count} />
+          <InfoCharts salesProjectsInProgress={salesProjectsInProgress} projectsCountByAge={projectsCountByAge} projectsBySales={projectsBySales} />
         </section>
         <section>
           <div className="mb-6">
